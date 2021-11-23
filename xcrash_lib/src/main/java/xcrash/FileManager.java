@@ -42,9 +42,7 @@ class FileManager {
     private String placeholderCleanSuffix = ".clean.xcrash";
     private String placeholderDirtySuffix = ".dirty.xcrash";
     private String logDir = null;
-    private int javaLogCountMax = 0;
     private int nativeLogCountMax = 0;
-    private int anrLogCountMax = 0;
     private int traceLogCountMax = 1;
     private int placeholderCountMax = 0;
     private int placeholderSizeKb = 0;
@@ -59,11 +57,10 @@ class FileManager {
         return instance;
     }
 
-    void initialize(String logDir, int javaLogCountMax, int nativeLogCountMax, int anrLogCountMax, int placeholderCountMax, int placeholderSizeKb, int delayMs) {
+    void initialize(String logDir, int nativeLogCountMax, int placeholderCountMax, int placeholderSizeKb, int delayMs) {
         this.logDir = logDir;
-        this.javaLogCountMax = javaLogCountMax;
         this.nativeLogCountMax = nativeLogCountMax;
-        this.anrLogCountMax = anrLogCountMax;
+
         this.placeholderCountMax = placeholderCountMax;
         this.placeholderSizeKb = placeholderSizeKb;
         this.delayMs = delayMs;
@@ -78,9 +75,7 @@ class FileManager {
                 return;
             }
 
-            int javaLogCount = 0;
             int nativeLogCount = 0;
-            int anrLogCount = 0;
             int traceLogCount = 0;
             int placeholderCleanCount = 0;
             int placeholderDirtyCount = 0;
@@ -88,13 +83,9 @@ class FileManager {
                 if (file.isFile()) {
                     String name = file.getName();
                     if (name.startsWith(Util.logPrefix + "_")) {
-                        if (name.endsWith(Util.javaLogSuffix)) {
-                            javaLogCount++;
-                        } else if (name.endsWith(Util.nativeLogSuffix)) {
+                       if (name.endsWith(Util.nativeLogSuffix)) {
                             nativeLogCount++;
-                        } else if (name.endsWith(Util.anrLogSuffix)) {
-                            anrLogCount++;
-                        } else if (name.endsWith(Util.traceLogSuffix)) {
+                        }  else if (name.endsWith(Util.traceLogSuffix)) {
                             traceLogCount++;
                         }
                     } else if (name.startsWith(placeholderPrefix + "_")) {
@@ -107,26 +98,20 @@ class FileManager {
                 }
             }
 
-            if (javaLogCount <= this.javaLogCountMax
-                && nativeLogCount <= this.nativeLogCountMax
-                && anrLogCount <= this.anrLogCountMax
+            if (nativeLogCount <= this.nativeLogCountMax
                 && traceLogCount <= this.traceLogCountMax
                 && placeholderCleanCount == this.placeholderCountMax
                 && placeholderDirtyCount == 0) {
                 //everything OK, need to do nothing
                 this.delayMs = -1;
-            } else if (javaLogCount > this.javaLogCountMax + 10
-                || nativeLogCount > this.nativeLogCountMax + 10
-                || anrLogCount > this.anrLogCountMax + 10
+            } else if (nativeLogCount > this.nativeLogCountMax + 10
                 || traceLogCount > this.traceLogCountMax + 10
                 || placeholderCleanCount > this.placeholderCountMax + 10
                 || placeholderDirtyCount > 10) {
                 //too many unwanted files, clean up now
                 doMaintain();
                 this.delayMs = -1;
-            } else if (javaLogCount > this.javaLogCountMax
-                || nativeLogCount > this.nativeLogCountMax
-                || anrLogCount > this.anrLogCountMax
+            } else if ( nativeLogCount > this.nativeLogCountMax
                 || traceLogCount > this.traceLogCountMax
                 || placeholderCleanCount > this.placeholderCountMax
                 || placeholderDirtyCount > 0) {
@@ -167,19 +152,6 @@ class FileManager {
         }
     }
 
-    boolean maintainAnr() {
-        if (!Util.checkAndCreateDir(logDir)) {
-            return false;
-        }
-        File dir = new File(logDir);
-
-        try {
-            return doMaintainTombstoneType(dir, Util.anrLogSuffix, anrLogCountMax);
-        } catch (Exception e) {
-            XCrash.getLogger().e(Util.TAG, "FileManager maintainAnr failed", e);
-            return false;
-        }
-    }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     File createLogFile(String filePath) {
@@ -343,8 +315,6 @@ class FileManager {
 
     private void doMaintainTombstone(File dir) {
         doMaintainTombstoneType(dir, Util.nativeLogSuffix, nativeLogCountMax);
-        doMaintainTombstoneType(dir, Util.javaLogSuffix, javaLogCountMax);
-        doMaintainTombstoneType(dir, Util.anrLogSuffix, anrLogCountMax);
         doMaintainTombstoneType(dir, Util.traceLogSuffix, traceLogCountMax);
     }
 

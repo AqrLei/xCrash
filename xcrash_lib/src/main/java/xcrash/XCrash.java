@@ -117,74 +117,25 @@ public final class XCrash {
         //get PID and process name
         int pid = android.os.Process.myPid();
         String processName = null;
-        if (params.enableJavaCrashHandler || params.enableAnrHandler) {
-            processName = Util.getProcessName(ctx, pid);
-
-            //capture only the ANR of the main process
-            if (params.enableAnrHandler) {
-                if (TextUtils.isEmpty(processName) || !processName.equals(packageName)) {
-                    params.enableAnrHandler = false;
-                }
-            }
-        }
 
         //init file manager
         FileManager.getInstance().initialize(
             params.logDir,
-            params.javaLogCountMax,
             params.nativeLogCountMax,
-            params.anrLogCountMax,
             params.placeholderCountMax,
             params.placeholderSizeKb,
             params.logFileMaintainDelayMs);
 
-        if (params.enableJavaCrashHandler || params.enableNativeCrashHandler || params.enableAnrHandler) {
+        if (params.enableNativeCrashHandler) {
             if (ctx instanceof Application) {
                 ActivityMonitor.getInstance().initialize((Application) ctx);
             }
         }
 
-        //init java crash handler
-        if (params.enableJavaCrashHandler) {
-            JavaCrashHandler.getInstance().initialize(
-                pid,
-                processName,
-                appId,
-                params.appVersion,
-                params.logDir,
-                params.javaRethrow,
-                params.javaLogcatSystemLines,
-                params.javaLogcatEventsLines,
-                params.javaLogcatMainLines,
-                params.javaDumpFds,
-                params.javaDumpNetworkInfo,
-                params.javaDumpAllThreads,
-                params.javaDumpAllThreadsCountMax,
-                params.javaDumpAllThreadsWhiteList,
-                params.javaCallback);
-        }
-
-        //init ANR handler (API level < 21)
-        if (params.enableAnrHandler && Build.VERSION.SDK_INT < 21) {
-            AnrHandler.getInstance().initialize(
-                ctx,
-                pid,
-                processName,
-                appId,
-                params.appVersion,
-                params.logDir,
-                params.anrCheckProcessState,
-                params.anrLogcatSystemLines,
-                params.anrLogcatEventsLines,
-                params.anrLogcatMainLines,
-                params.anrDumpFds,
-                params.anrDumpNetworkInfo,
-                params.anrCallback);
-        }
 
         //init native crash handler / ANR handler (API level >= 21)
         int r = Errno.OK;
-        if (params.enableNativeCrashHandler || (params.enableAnrHandler && Build.VERSION.SDK_INT >= 21)) {
+        if (params.enableNativeCrashHandler ) {
             r = NativeHandler.getInstance().initialize(
                 ctx,
                 params.libLoader,
@@ -203,16 +154,7 @@ public final class XCrash {
                 params.nativeDumpAllThreads,
                 params.nativeDumpAllThreadsCountMax,
                 params.nativeDumpAllThreadsWhiteList,
-                params.nativeCallback,
-                params.enableAnrHandler && Build.VERSION.SDK_INT >= 21,
-                params.anrRethrow,
-                params.anrCheckProcessState,
-                params.anrLogcatSystemLines,
-                params.anrLogcatEventsLines,
-                params.anrLogcatMainLines,
-                params.anrDumpFds,
-                params.anrDumpNetworkInfo,
-                params.anrCallback);
+                params.nativeCallback);
         }
 
         //maintain tombstone and placeholder files in a background thread with some delay
@@ -320,182 +262,6 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setPlaceholderSizeKb(int sizeKb) {
             this.placeholderSizeKb = (sizeKb < 0 ? 0 : sizeKb);
-            return this;
-        }
-
-        //java crash
-        boolean        enableJavaCrashHandler      = true;
-        boolean        javaRethrow                 = true;
-        int            javaLogCountMax             = 10;
-        int            javaLogcatSystemLines       = 50;
-        int            javaLogcatEventsLines       = 50;
-        int            javaLogcatMainLines         = 200;
-        boolean        javaDumpFds                 = true;
-        boolean        javaDumpNetworkInfo         = true;
-        boolean        javaDumpAllThreads          = true;
-        int            javaDumpAllThreadsCountMax  = 0;
-        String[]       javaDumpAllThreadsWhiteList = null;
-        ICrashCallback javaCallback                = null;
-
-        /**
-         * Enable the Java exception capture feature. (Default: enable)
-         *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters enableJavaCrashHandler() {
-            this.enableJavaCrashHandler = true;
-            return this;
-        }
-
-        /**
-         * Disable the Java exception capture feature. (Default: enable)
-         *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters disableJavaCrashHandler() {
-            this.enableJavaCrashHandler = false;
-            return this;
-        }
-
-        /**
-         * Set whether xCrash should rethrow the Java exception to system
-         * after it has been handled. (Default: true)
-         *
-         * @param rethrow If <code>true</code>, the Java exception will be rethrown to Android System.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaRethrow(boolean rethrow) {
-            this.javaRethrow = rethrow;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of Java crash log files to save in the log directory. (Default: 10)
-         *
-         * @param countMax The maximum number of Java crash log files.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaLogCountMax(int countMax) {
-            this.javaLogCountMax = (countMax < 1 ? 1 : countMax);
-            return this;
-        }
-
-        /**
-         * Set the maximum number of rows to get from "logcat -b system" when a Java exception occurred. (Default: 50)
-         *
-         * @param logcatSystemLines The maximum number of rows.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaLogcatSystemLines(int logcatSystemLines) {
-            this.javaLogcatSystemLines = logcatSystemLines;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of rows to get from "logcat -b events" when a Java exception occurred. (Default: 50)
-         *
-         * @param logcatEventsLines The maximum number of rows.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaLogcatEventsLines(int logcatEventsLines) {
-            this.javaLogcatEventsLines = logcatEventsLines;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of rows to get from "logcat -b main" when a Java exception occurred. (Default: 200)
-         *
-         * @param logcatMainLines The maximum number of rows.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaLogcatMainLines(int logcatMainLines) {
-            this.javaLogcatMainLines = logcatMainLines;
-            return this;
-        }
-
-        /**
-         * Set if dumping FD list when a java crash occurred. (Default: enable)
-         *
-         * @param flag True or false.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaDumpFds(boolean flag) {
-            this.javaDumpFds = flag;
-            return this;
-        }
-
-        /**
-         * Set if dumping network info when a java crash occurred. (Default: enable)
-         *
-         * @param flag True or false.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaDumpNetworkInfo(boolean flag) {
-            this.javaDumpNetworkInfo = flag;
-            return this;
-        }
-
-        /**
-         * Set if dumping threads info (stacktrace) for all threads (not just the thread that has crashed)
-         * when a Java exception occurred. (Default: enable)
-         *
-         * @param flag True or false.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings({"unused", "WeakerAccess"})
-        public InitParameters setJavaDumpAllThreads(boolean flag) {
-            this.javaDumpAllThreads = flag;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of other threads to dump when a Java exception occurred.
-         * "0" means no limit. (Default: 0)
-         *
-         * <p>Note: This option is only useful when "JavaDumpAllThreads" is enabled by calling {@link InitParameters#setJavaDumpAllThreads(boolean)}.
-         *
-         * @param countMax The maximum number of other threads to dump.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaDumpAllThreadsCountMax(int countMax) {
-            this.javaDumpAllThreadsCountMax = (countMax < 0 ? 0 : countMax);
-            return this;
-        }
-
-        /**
-         * Set a thread name (regular expression) whitelist to filter which threads need to be dumped when a Java exception occurred.
-         * "null" means no filtering. (Default: null)
-         *
-         * <p>Note: This option is only useful when "JavaDumpAllThreads" is enabled by calling {@link InitParameters#setJavaDumpAllThreads(boolean)}.
-         *
-         * @param whiteList A thread name (regular expression) whitelist.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaDumpAllThreadsWhiteList(String[] whiteList) {
-            this.javaDumpAllThreadsWhiteList = whiteList;
-            return this;
-        }
-
-        /**
-         * Set a callback to be executed when a Java exception occurred. (If not set, nothing will be happened.)
-         *
-         * @param callback An instance of {@link xcrash.ICrashCallback}.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setJavaCallback(ICrashCallback callback) {
-            this.javaCallback = callback;
             return this;
         }
 
@@ -702,155 +468,6 @@ public final class XCrash {
         @SuppressWarnings("unused")
         public InitParameters setNativeCallback(ICrashCallback callback) {
             this.nativeCallback = callback;
-            return this;
-        }
-
-        //anr
-        boolean        enableAnrHandler     = true;
-        boolean        anrRethrow           = true;
-        boolean        anrCheckProcessState = true;
-        int            anrLogCountMax       = 10;
-        int            anrLogcatSystemLines = 50;
-        int            anrLogcatEventsLines = 50;
-        int            anrLogcatMainLines   = 200;
-        boolean        anrDumpFds           = true;
-        boolean        anrDumpNetworkInfo   = true;
-        ICrashCallback anrCallback          = null;
-
-        /**
-         * Enable the ANR capture feature. (Default: enable)
-         *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters enableAnrCrashHandler() {
-            this.enableAnrHandler = true;
-            return this;
-        }
-
-        /**
-         * Disable the ANR capture feature. (Default: enable)
-         *
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters disableAnrCrashHandler() {
-            this.enableAnrHandler = false;
-            return this;
-        }
-
-        /**
-         * Set whether xCrash should rethrow the ANR native signal to system
-         * after it has been handled. (Default: true)
-         *
-         * <p>Note: This option is only valid if Android API level greater than or equal to 21.
-         *
-         * <p>Warning: It is highly recommended NOT to modify the default value (true) in most cases unless you know that you are doing.
-         *
-         * @param rethrow If <code>true</code>, the native signal will be rethrown to Android System.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrRethrow(boolean rethrow) {
-            this.anrRethrow = rethrow;
-            return this;
-        }
-
-        /**
-         * Set whether the process error state (from "ActivityManager#getProcessesInErrorState()") is a necessary condition for ANR.  (Default: true)
-         *
-         * <p>Note: On some Android TV box devices, the ANR is not reflected by process error state. In this case, set this option to false.
-         *
-         * @param checkProcessState If <code>true</code>, process state error will be a necessary condition for ANR.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrCheckProcessState(boolean checkProcessState) {
-            this.anrCheckProcessState = checkProcessState;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of ANR log files to save in the log directory. (Default: 10)
-         *
-         * @param countMax The maximum number of ANR log files.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrLogCountMax(int countMax) {
-            this.anrLogCountMax = (countMax < 1 ? 1 : countMax);
-            return this;
-        }
-
-        /**
-         * Set the maximum number of rows to get from "logcat -b system" when an ANR occurred. (Default: 50)
-         *
-         * @param logcatSystemLines The maximum number of rows.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrLogcatSystemLines(int logcatSystemLines) {
-            this.anrLogcatSystemLines = logcatSystemLines;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of rows to get from "logcat -b events" when an ANR occurred. (Default: 50)
-         *
-         * @param logcatEventsLines The maximum number of rows.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrLogcatEventsLines(int logcatEventsLines) {
-            this.anrLogcatEventsLines = logcatEventsLines;
-            return this;
-        }
-
-        /**
-         * Set the maximum number of rows to get from "logcat -b main" when an ANR occurred. (Default: 200)
-         *
-         * @param logcatMainLines The maximum number of rows.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrLogcatMainLines(int logcatMainLines) {
-            this.anrLogcatMainLines = logcatMainLines;
-            return this;
-        }
-
-        /**
-         * Set if dumping FD list when an ANR occurred. (Default: enable)
-         *
-         * @param flag True or false.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrDumpFds(boolean flag) {
-            this.anrDumpFds = flag;
-            return this;
-        }
-
-        /**
-         * Set if dumping network info when an ANR occurred. (Default: enable)
-         *
-         * @param flag True or false.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrDumpNetwork(boolean flag) {
-            this.anrDumpNetworkInfo = flag;
-            return this;
-        }
-
-        /**
-         * Set a callback to be executed when an ANR occurred. (If not set, nothing will be happened.)
-         *
-         * @param callback An instance of {@link xcrash.ICrashCallback}.
-         * @return The InitParameters object.
-         */
-        @SuppressWarnings("unused")
-        public InitParameters setAnrCallback(ICrashCallback callback) {
-            this.anrCallback = callback;
             return this;
         }
     }

@@ -436,21 +436,11 @@ public class TombstoneParser {
             filename = filename.substring(Util.logPrefix.length() + 1);
 
             //ignore suffix, save crash type
-            if (filename.endsWith(Util.javaLogSuffix)) {
-                if (TextUtils.isEmpty(crashType)) {
-                    map.put(keyCrashType, Util.javaCrashType);
-                }
-                filename = filename.substring(0, filename.length() - Util.javaLogSuffix.length());
-            } else if (filename.endsWith(Util.nativeLogSuffix)) {
+            if (filename.endsWith(Util.nativeLogSuffix)) {
                 if (TextUtils.isEmpty(crashType)) {
                     map.put(keyCrashType, Util.nativeCrashType);
                 }
                 filename = filename.substring(0, filename.length() - Util.nativeLogSuffix.length());
-            } else if (filename.endsWith(Util.anrLogSuffix)) {
-                if (TextUtils.isEmpty(crashType)) {
-                    map.put(keyCrashType, Util.anrCrashType);
-                }
-                filename = filename.substring(0, filename.length() - Util.anrLogSuffix.length());
             } else {
                 return;
             }

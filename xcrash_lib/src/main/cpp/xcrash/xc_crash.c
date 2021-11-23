@@ -53,7 +53,6 @@
 #include "xcc_b64.h"
 #include "xcc_util.h"
 #include "xc_crash.h"
-#include "xc_trace.h"
 #include "xc_common.h"
 #include "xc_dl.h"
 #include "xc_util.h"
@@ -417,12 +416,6 @@ static void xc_crash_signal_handler(int sig, siginfo_t *si, void *uc)
         if(0 != xcc_signal_crash_ignore()) goto exit;
     }
 
-    if(XC_TRACE_DUMP_ON_GOING == xc_trace_dump_status) 
-    {
-        xc_trace_dump_status = XC_TRACE_DUMP_ART_CRASH;
-        XCD_LOG_WARN("meet error sig(%d) while calling ART dump trace\n", sig);
-        siglongjmp(jmpenv, 1);
-    }
 
     //save crash time
     clock_gettime(CLOCK_REALTIME, &crash_tp);

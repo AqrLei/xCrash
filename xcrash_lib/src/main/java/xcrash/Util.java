@@ -63,14 +63,10 @@ class Util {
 
     static final String timeFormatterStr = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
 
-    static final String javaCrashType = "java";
     static final String nativeCrashType = "native";
-    static final String anrCrashType = "anr";
 
     static final String logPrefix = "tombstone";
-    static final String javaLogSuffix = ".java.xcrash";
     static final String nativeLogSuffix = ".native.xcrash";
-    static final String anrLogSuffix = ".anr.xcrash";
     static final String traceLogSuffix = ".trace.xcrash";
 
     static String getProcessName(Context ctx, int pid) {

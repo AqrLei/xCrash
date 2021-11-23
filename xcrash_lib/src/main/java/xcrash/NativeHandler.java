@@ -34,14 +34,9 @@ import java.util.Map;
 class NativeHandler {
 
     private static final NativeHandler instance = new NativeHandler();
-    private long anrTimeoutMs = 15 * 1000;
 
-    private Context ctx;
     private boolean crashRethrow;
     private ICrashCallback crashCallback;
-    private boolean anrEnable;
-    private boolean anrCheckProcessState;
-    private ICrashCallback anrCallback;
 
     private boolean initNativeLibOk = false;
 
@@ -69,16 +64,7 @@ class NativeHandler {
                    boolean crashDumpAllThreads,
                    int crashDumpAllThreadsCountMax,
                    String[] crashDumpAllThreadsWhiteList,
-                   ICrashCallback crashCallback,
-                   boolean anrEnable,
-                   boolean anrRethrow,
-                   boolean anrCheckProcessState,
-                   int anrLogcatSystemLines,
-                   int anrLogcatEventsLines,
-                   int anrLogcatMainLines,
-                   boolean anrDumpFds,
-                   boolean anrDumpNetworkInfo,
-                   ICrashCallback anrCallback) {
+                   ICrashCallback crashCallback) {
         //load lib
         if (libLoader == null) {
             try {
@@ -96,13 +82,8 @@ class NativeHandler {
             }
         }
 
-        this.ctx = ctx;
         this.crashRethrow = crashRethrow;
         this.crashCallback = crashCallback;
-        this.anrEnable = anrEnable;
-        this.anrCheckProcessState = anrCheckProcessState;
-        this.anrCallback = anrCallback;
-        this.anrTimeoutMs = anrRethrow ? 15 * 1000 : 30 * 1000; //setting rethrow to "false" is NOT recommended
 
         //init native lib
         try {
@@ -129,14 +110,7 @@ class NativeHandler {
                 crashDumpNetworkInfo,
                 crashDumpAllThreads,
                 crashDumpAllThreadsCountMax,
-                crashDumpAllThreadsWhiteList,
-                anrEnable,
-                anrRethrow,
-                anrLogcatSystemLines,
-                anrLogcatEventsLines,
-                anrLogcatMainLines,
-                anrDumpFds,
-                anrDumpNetworkInfo);
+                crashDumpAllThreadsWhiteList);
             if (r != 0) {
                 XCrash.getLogger().e(Util.TAG, "NativeHandler init failed");
                 return Errno.INIT_LIBRARY_FAILED;
@@ -149,11 +123,6 @@ class NativeHandler {
         }
     }
 
-    void notifyJavaCrashed() {
-        if (initNativeLibOk && anrEnable) {
-            NativeHandler.nativeNotifyJavaCrashed();
-        }
-    }
 
     void testNativeCrash(boolean runInNewThread) {
         if (initNativeLibOk) {
@@ -214,51 +183,6 @@ class NativeHandler {
         }
     }
 
-    // do NOT obfuscate this method
-    @SuppressWarnings("unused")
-    private static void traceCallback(String logPath, String emergency) {
-        if (TextUtils.isEmpty(logPath)) {
-            return;
-        }
-
-        //append memory info
-        TombstoneManager.appendSection(logPath, "memory info", Util.getProcessMemoryInfo());
-
-        //append background / foreground
-        TombstoneManager.appendSection(logPath, "foreground", ActivityMonitor.getInstance().isApplicationForeground() ? "yes" : "no");
-
-        //check process ANR state
-        if (NativeHandler.getInstance().anrCheckProcessState) {
-            if (!Util.checkProcessAnrState(NativeHandler.getInstance().ctx, NativeHandler.getInstance().anrTimeoutMs)) {
-                FileManager.getInstance().recycleLogFile(new File(logPath));
-                return; //not an ANR
-            }
-        }
-
-        //delete extra ANR log files
-        if (!FileManager.getInstance().maintainAnr()) {
-            return;
-        }
-
-        //rename trace log file to ANR log file
-        String anrLogPath = logPath.substring(0, logPath.length() - Util.traceLogSuffix.length()) + Util.anrLogSuffix;
-        File traceFile = new File(logPath);
-        File anrFile = new File(anrLogPath);
-        if (!traceFile.renameTo(anrFile)) {
-            FileManager.getInstance().recycleLogFile(traceFile);
-            return;
-        }
-
-        ICrashCallback callback = NativeHandler.getInstance().anrCallback;
-        if (callback != null) {
-            try {
-                callback.onCrash(anrLogPath, emergency);
-            } catch (Exception e) {
-                XCrash.getLogger().w(Util.TAG, "NativeHandler ANR callback.onCrash failed", e);
-            }
-        }
-    }
-
     private static native int nativeInit(
             int apiLevel,
             String osVersion,
@@ -282,14 +206,7 @@ class NativeHandler {
             boolean crashDumpNetworkInfo,
             boolean crashDumpAllThreads,
             int crashDumpAllThreadsCountMax,
-            String[] crashDumpAllThreadsWhiteList,
-            boolean traceEnable,
-            boolean traceRethrow,
-            int traceLogcatSystemLines,
-            int traceLogcatEventsLines,
-            int traceLogcatMainLines,
-            boolean traceDumpFds,
-            boolean traceDumpNetworkInfo);
+            String[] crashDumpAllThreadsWhiteList);
 
     private static native void nativeNotifyJavaCrashed();
 

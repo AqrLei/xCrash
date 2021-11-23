@@ -34,7 +34,6 @@
 #include "xc_jni.h"
 #include "xc_common.h"
 #include "xc_crash.h"
-#include "xc_trace.h"
 #include "xc_util.h"
 #include "xc_test.h"
 
@@ -67,18 +66,10 @@ static jint xc_jni_init(JNIEnv       *env,
                         jboolean      crash_dump_network_info,
                         jboolean      crash_dump_all_threads,
                         jint          crash_dump_all_threads_count_max,
-                        jobjectArray  crash_dump_all_threads_whitelist,
-                        jboolean      trace_enable,
-                        jboolean      trace_rethrow,
-                        jint          trace_logcat_system_lines,
-                        jint          trace_logcat_events_lines,
-                        jint          trace_logcat_main_lines,
-                        jboolean      trace_dump_fds,
-                        jboolean      trace_dump_network_info)
+                        jobjectArray  crash_dump_all_threads_whitelist)
 {
     int              r_crash                                = XCC_ERRNO_JNI;
-    int              r_trace                                = XCC_ERRNO_JNI;
-    
+
     const char      *c_os_version                           = NULL;
     const char      *c_abi_list                             = NULL;
     const char      *c_manufacturer                         = NULL;
@@ -103,12 +94,11 @@ static jint xc_jni_init(JNIEnv       *env,
     if(xc_jni_inited) return XCC_ERRNO_JNI;
     xc_jni_inited = 1;
 
-    if(!env || !(*env) || (!crash_enable && ! trace_enable) || api_level < 0 ||
+    if(!env || !(*env) || (!crash_enable ) || api_level < 0 ||
        !os_version || !abi_list || !manufacturer || !brand || !model || !build_fingerprint ||
        !app_id || !app_version || !app_lib_dir || !log_dir ||
        crash_logcat_system_lines < 0 || crash_logcat_events_lines < 0 || crash_logcat_main_lines < 0 ||
-       crash_dump_all_threads_count_max < 0 ||
-       trace_logcat_system_lines < 0 || trace_logcat_events_lines < 0 || trace_logcat_main_lines < 0)
+       crash_dump_all_threads_count_max < 0 )
         return XCC_ERRNO_INVAL;
 
     if(NULL == (c_os_version        = (*env)->GetStringUTFChars(env, os_version,        0))) goto clean;
@@ -136,8 +126,7 @@ static jint xc_jni_init(JNIEnv       *env,
                            c_log_dir)) goto clean;
     
     r_crash = 0;
-    r_trace = 0;
-    
+
     if(crash_enable)
     {
         r_crash = XCC_ERRNO_JNI;
@@ -175,18 +164,6 @@ static jint xc_jni_init(JNIEnv       *env,
                                 c_crash_dump_all_threads_whitelist_len);
     }
     
-    if(trace_enable)
-    {
-        //trace init
-        r_trace = xc_trace_init(env,
-                            trace_rethrow ? 1 : 0,
-                            (unsigned int)trace_logcat_system_lines,
-                            (unsigned int)trace_logcat_events_lines,
-                            (unsigned int)trace_logcat_main_lines,
-                            trace_dump_fds ? 1 : 0,
-                            trace_dump_network_info ? 1 : 0);
-    }
-    
  clean:
     if(os_version        && c_os_version)        (*env)->ReleaseStringUTFChars(env, os_version,        c_os_version);
     if(abi_list          && c_abi_list)          (*env)->ReleaseStringUTFChars(env, abi_list,          c_abi_list);
@@ -210,7 +187,7 @@ static jint xc_jni_init(JNIEnv       *env,
         free(c_crash_dump_all_threads_whitelist);
     }
     
-    return (0 == r_crash && 0 == r_trace) ? 0 : XCC_ERRNO_JNI;
+    return (0 == r_crash ) ? 0 : XCC_ERRNO_JNI;
 }
 
 static void xc_jni_notify_java_crashed(JNIEnv *env, jobject thiz)
@@ -256,13 +233,6 @@ static JNINativeMethod xc_jni_methods[] = {
         "Z"
         "I"
         "[Ljava/lang/String;"
-        "Z"
-        "Z"
-        "I"
-        "I"
-        "I"
-        "Z"
-        "Z"
         ")"
         "I",
         (void *)xc_jni_init

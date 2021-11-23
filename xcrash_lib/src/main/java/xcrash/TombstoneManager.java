@@ -62,17 +62,6 @@ public class TombstoneManager {
     }
 
     /**
-     * Determines if the current log file recorded a Java exception.
-     *
-     * @param log Object of the log file.
-     * @return Return true if YES, false otherwise.
-     */
-    @SuppressWarnings("unused")
-    public static boolean isJavaCrash(File log) {
-        return log.getName().endsWith(Util.javaLogSuffix);
-    }
-
-    /**
      * Determines if the current log file recorded a native crash.
      *
      * @param log Object of the log file.
@@ -81,27 +70,6 @@ public class TombstoneManager {
     @SuppressWarnings("unused")
     public static boolean isNativeCrash(File log) {
         return log.getName().endsWith(Util.nativeLogSuffix);
-    }
-
-    /**
-     * Determines if the current log file recorded an ANR.
-     *
-     * @param log Object of the log file.
-     * @return Return true if YES, false otherwise.
-     */
-    @SuppressWarnings("unused")
-    public static boolean isAnr(File log) {
-        return log.getName().endsWith(Util.anrLogSuffix);
-    }
-
-    /**
-     * Get all Java exception log files.
-     *
-     * @return An array of File objects of the Java exception log files.
-     */
-    @SuppressWarnings("unused")
-    public static File[] getJavaTombstones() {
-        return getTombstones(new String[]{Util.javaLogSuffix});
     }
 
     /**
@@ -115,23 +83,13 @@ public class TombstoneManager {
     }
 
     /**
-     * Get all ANR log files.
-     *
-     * @return An array of File objects of the ANR log files.
-     */
-    @SuppressWarnings("unused")
-    public static File[] getAnrTombstones() {
-        return getTombstones(new String[]{Util.anrLogSuffix});
-    }
-
-    /**
      * Get all Java exception, native crash and ANR log files.
      *
      * @return An array of File objects of the Java exception, native crash and ANR log files.
      */
     @SuppressWarnings("unused")
     public static File[] getAllTombstones() {
-        return getTombstones(new String[]{Util.javaLogSuffix, Util.nativeLogSuffix, Util.anrLogSuffix});
+        return getTombstones(new String[]{Util.nativeLogSuffix});
     }
 
     /**
@@ -161,16 +119,6 @@ public class TombstoneManager {
     }
 
     /**
-     * Delete all Java exception log files.
-     *
-     * @return Return true if successful, false otherwise.
-     */
-    @SuppressWarnings("unused")
-    public static boolean clearJavaTombstones() {
-        return clearTombstones(new String[]{Util.javaLogSuffix});
-    }
-
-    /**
      * Delete all native crash log files.
      *
      * @return Return true if successful, false otherwise.
@@ -181,23 +129,13 @@ public class TombstoneManager {
     }
 
     /**
-     * Delete all ANR log files.
-     *
-     * @return Return true if successful, false otherwise.
-     */
-    @SuppressWarnings("unused")
-    public static boolean clearAnrTombstones() {
-        return clearTombstones(new String[]{Util.anrLogSuffix});
-    }
-
-    /**
      * Delete all Java exception, native crash and ANR log files.
      *
      * @return Return true if successful, false otherwise.
      */
     @SuppressWarnings("unused")
     public static boolean clearAllTombstones() {
-        return clearTombstones(new String[]{Util.javaLogSuffix, Util.nativeLogSuffix, Util.anrLogSuffix});
+        return clearTombstones(new String[]{Util.nativeLogSuffix});
     }
 
     private static File[] getTombstones(final String[] logPrefixes) {
